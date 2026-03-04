@@ -18,7 +18,7 @@ services:
       - "--log.level=INFO"
     ports:
       - "80:80"      # HTTP
-      - "8080:8080"  # Traefik dashboard (insecure for local)
+      - "8181:8080"  # Traefik dashboard (insecure for local)
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
@@ -40,7 +40,9 @@ services:
     ports:
       - "5433:5432"
     networks:
-      - backend
+      backend:
+        aliases:
+          - postgres
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d usersdb"]
       interval: 10s
@@ -111,7 +113,7 @@ services:
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
-      - "9090:9090"
+      - "9695:9595"
     networks:
       - backend
     restart: unless-stopped
@@ -133,8 +135,8 @@ services:
   jaeger:
     image: jaegertracing/all-in-one:1.43
     ports:
-      - "16686:16686"
-      - "14268:14268"
+      - "17206:16686"
+      - "14369:14368"
     networks:
       - backend
     restart: unless-stopped
@@ -148,7 +150,7 @@ services:
       context: ../user-service
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: "postgresql://user:userpassword@postgres-user:5432/usersdb"
+      DATABASE_URL: "postgresql+asyncpg://user:userpassword@localhost:5432/usersdb"
       REDIS_URL: "redis://redis:6379/0"
       RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
       JWT_SECRET: "dev-jwt-secret" # use envfile or secrets in production
@@ -162,12 +164,12 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.user.rule=Host(`user.localhost`)"
-      - "traefik.http.services.user.loadbalancer.server.port=8000"
+      - "traefik.http.services.user.loadbalancer.server.port=8080"
     networks:
       - backend
       - traefik
     ports:
-      - "8001:8000"   # optional: map for direct access
+      - "8001:8080"   # optional: map for direct access
     restart: on-failure
 
 volumes:

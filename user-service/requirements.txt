@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+psycopg[binary]
+asyncpg
+alembic
+sqlalchemy
+pydantic
+pydantic-settings
+email-validator
+python-jose[cryptography]
+bcrypt<4
+passlib[bcrypt]
+aioredis
+prometheus-client
+psycopg2-binary

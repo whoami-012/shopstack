@@ -5,6 +5,9 @@ from app.api.dependencies import get_current_user, get_db
 from app.schemas.user import DeleteAccountRequest
 from app.models.user import User
 from app.utils.security import verify_password
+from app.events.publisher import publish_event
+from datetime import datetime
+import logging
 
 router = APIRouter(prefix="/users", tags=["delete"])
 
@@ -23,5 +26,15 @@ async def delete_account(
     current_user.is_active = False
     #await db.delete(current_user)
     await db.commit()
-
+    # publish event user.deleted
+    current_user.deleted_at = datetime.utcnow()
+    try:
+        await publish_event("user.deleted", {"user_id": str(current_user.id), 
+                                             "email": current_user.email,
+                                               "deleted_time": current_user.deleted_at.isoformat(),
+                                                 "is_active": bool(current_user.is_active)}
+                                                 )
+    except Exception as e:
+        logging.getLogger(__name__).warning("user.deleted publish failed: %s", e) 
     return {"message": "Account deleted Successfully"}
+

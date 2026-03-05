@@ -1,4 +1,5 @@
 fastapi
+aio-pika
 uvicorn[standard]
 psycopg[binary]
 asyncpg

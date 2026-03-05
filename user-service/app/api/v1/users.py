@@ -1,26 +1,26 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.database import AsyncSessionLocal
 from app.schemas.user import UserCreate, UserRead, UserLogin, Token
 from app.repos.user_repo import UserRepo
 from app.services.auth import AuthService
+from app.api.dependencies import get_db
 
 router = APIRouter(prefix="/users", tags=["users"])
-
-async def get_db():
-    async with AsyncSessionLocal() as session:
-        yield session
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def register(payload: UserCreate, db: AsyncSession = Depends(get_db)):
     repo = UserRepo(db)
-    existing = await repo.get_by_email(payload.email)
+    
+    existing_username = await repo.get_by_username(payload.username)    
+    if existing_username:
+        raise HTTPException(status_code=409, detail="Username already registered")
+    
+    existing = await repo.get_by_email(payload.email)    
     if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=409, detail="Email already registered")
+    
     svc = AuthService(repo)
-    user = await svc.register(payload.username, payload.email, payload.password)
-    await db.commit()
-    await db.refresh(user)
+    user = await svc.register(payload.username, payload.email, payload.password, db)
     return user
 
 @router.post("/login", response_model=Token)

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
 from datetime import datetime
 from uuid import UUID
@@ -7,7 +7,13 @@ class UserCreate(BaseModel):
     username: str
     email: EmailStr
     password: str
-    role: str = "user"
+    role: str = Field(default="user")
+    @field_validator("role")
+    @classmethod
+    def role_allowlist(cls, v):
+        if v not in {"user", "seller"}:
+            raise ValueError("role must be 'user' or 'seller'")
+        return v
 
 class UserRead(BaseModel):
     id: UUID = Field(alias="id")

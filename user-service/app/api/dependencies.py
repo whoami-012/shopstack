@@ -5,7 +5,7 @@ from app.db.database import AsyncSessionLocal
 from app.repos.user_repo import UserRepo
 from app.utils.security import decode_token
 from app.models.user import User
-from uuid import UUID
+from app.schemas.user import UserRead
 
 router = APIRouter(prefix="/api", tags=["dependencies"])
 security = HTTPBearer()
@@ -27,7 +27,7 @@ async def require_admin(credentials: HTTPAuthorizationCredentials = Depends(secu
     repo = UserRepo(db)
     user = await repo.get_by_id(user_id)
 
-    if not user or user.role != "admin":
+    if not user or not user.is_active or user.role != "admin":
         raise HTTPException(status_code=403, detail="403 Forbidden")
     
     return user
@@ -52,9 +52,12 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
+
+    if not user.is_active:
+        raise HTTPException(status_code=401, detail="User account is inactive")
     
     return user
 
-@router.get("/me",  dependencies=[Depends(get_current_user)])
+@router.get("/me", response_model=UserRead, dependencies=[Depends(get_current_user)])
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user

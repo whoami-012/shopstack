@@ -57,7 +57,7 @@ services:
   postgres-product:
     image: postgres:15
     environment:
-      POSTGRES_DB: productsdb
+      POSTGRES_DB: productdb
       POSTGRES_USER: prod
       POSTGRES_PASSWORD: prodpassword
     volumes:
@@ -67,7 +67,7 @@ services:
     networks:
       - backend
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U prod -d productsdb"]
+      test: ["CMD-SHELL", "pg_isready -U prod -d productdb"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -151,9 +151,9 @@ services:
       context: ../user-service
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: "postgresql+asyncpg://user:userpassword@localhost:5432/usersdb"
+      DATABASE_URL: "postgresql+asyncpg://user:userpassword@postgres-user:5432/usersdb"
       REDIS_URL: "redis://redis:6379/0"
-      RABBITMQ_URL: "amqp://guest:guest@localhost:5672/"
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
       JWT_SECRET: "dev-jwt-secret" # use envfile or secrets in production
     depends_on:
       postgres-user:
@@ -171,6 +171,37 @@ services:
       - traefik
     ports:
       - "8001:8080"   # optional: map for direct access
+    restart: on-failure
+  notification-service:
+    build:
+      context: ../notification-service/app
+      dockerfile: Dockerfile
+    environment:
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+    depends_on:
+      - rabbitmq
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # -------------------------
+  # Product Service
+  # -------------------------
+  product-service:
+    build:
+      context: ../product-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://prod:prodpassword@postgres-product:5432/productdb"
+      JWT_SECRET: "dev-jwt-secret"
+      JWT_ALGORITHM: "HS256"
+    depends_on:
+      postgres-product:
+        condition: service_healthy
+    networks:
+      - backend
+    ports:
+      - "8002:8080"   # optional direct access
     restart: on-failure
 
 volumes:

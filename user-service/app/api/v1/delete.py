@@ -23,11 +23,10 @@ async def delete_account(
     if not verify_password(payload.password, current_user.password_hash):
         raise HTTPException(status_code=403, detail="Incorrect password")
 
-    current_user.is_active = False
-    #await db.delete(current_user)
-    await db.commit()
-    # publish event user.deleted
     current_user.deleted_at = datetime.utcnow()
+    current_user.is_active = False
+    await db.commit()
+    await db.refresh(current_user)
     try:
         await publish_event("user.deleted", {"user_id": str(current_user.id), 
                                              "email": current_user.email,

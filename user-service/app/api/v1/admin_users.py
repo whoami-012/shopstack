@@ -1,12 +1,10 @@
 from app.schemas.user import AdminUserUpdate
 from fastapi import Depends, APIRouter, HTTPException, Query
-from pydantic import BaseModel
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import require_admin, get_db
-from app.schemas.user import UserRead, DeleteAccountRequest
+from app.schemas.user import UserRead
 from app.models.user import User
-from app.utils.security import verify_password
 from app.repos.user_repo import UserRepo
 from uuid import UUID
 from typing import List as TypingList
@@ -24,7 +22,7 @@ async def list_users(db: AsyncSession = Depends(get_db),
     return users
 
 # recieving users by thier id
-@router.get("/admin/users/{id}", response_model=UserRead, dependencies=[Depends(require_admin)])
+@router.get("/{id}", response_model=UserRead, dependencies=[Depends(require_admin)])
 async def get_user(id: UUID, db: AsyncSession = Depends(get_db)):
     user = await UserRepo(db).get_by_id(id)
     if not user:
@@ -49,7 +47,7 @@ async def update_data(id: UUID, payload: AdminUserUpdate, db: AsyncSession = Dep
         if admin_count == 1:
             raise HTTPException(status_code=400, detail="Cannot demote the last active admin")  
     
-    if "role" in update_data and update_data["role"] not in {"user", "admin"}:
+    if "role" in update_data and update_data["role"] not in {"user", "seller", "admin"}:
         raise HTTPException(status_code=400, detail="not in allowed roles!")
     if not update_data:
         raise HTTPException(status_code=400, detail="Nothing to update")    

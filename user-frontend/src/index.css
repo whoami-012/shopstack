@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@theme {
+  --color-flone-red: #ff2f2f;
+  --color-flone-dark: #212121;
+  --color-flone-gray: #f7f7f7;
+  --color-flone-text: #666666;
+  --color-flone-border: #e5e5e5;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  
+  /* Map theme colors to CSS variables */
+  --color-page-bg: var(--bg-primary);
+  --color-page-text: var(--text-primary);
+  --color-page-heading: var(--text-heading);
+}
+
+:root {
+  --bg-primary: #ffffff;
+  --text-primary: #666666;
+  --text-heading: #212121;
+  --bg-secondary: #f7f7f7;
+  --border-color: #e5e5e5;
+  color-scheme: light;
+}
+
+.dark {
+  --bg-primary: #121212;
+  --text-primary: #a0a0a0;
+  --text-heading: #ffffff;
+  --bg-secondary: #1a1a1a;
+  --border-color: #333333;
+  color-scheme: dark;
+}
+
+/* Force dark mode class behavior for Tailwind dark: prefix */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  *, ::before, ::after {
+    @apply border-flone-border transition-colors duration-300;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--text-heading);
+  }
+}
+
+/* Utilities */
+.flone-container {
+  @apply max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+.flone-button {
+  @apply bg-flone-dark text-white px-8 py-3 hover:bg-flone-red transition-all duration-300 inline-block font-medium uppercase tracking-wider text-sm border-none cursor-pointer;
+}
+
+.dark .flone-button {
+  @apply bg-white text-flone-dark hover:bg-flone-red hover:text-white;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background-color: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { @apply bg-flone-border hover:bg-flone-red rounded-full; }

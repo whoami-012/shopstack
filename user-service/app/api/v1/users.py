@@ -19,8 +19,12 @@ async def register(payload: UserCreate, db: AsyncSession = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=409, detail="Email already registered")
     
+    allowed = {"user", "seller"}
+    if payload.role not in allowed:
+        raise HTTPException(status_code=400, detail="choose a valid account type")
+    role = payload.role
     svc = AuthService(repo)
-    user = await svc.register(payload.username, payload.email, payload.password, db)
+    user = await svc.register(payload.username, payload.email, payload.password, payload.role, db)
     return user
 
 @router.post("/login", response_model=Token)

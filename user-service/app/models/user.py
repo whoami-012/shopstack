@@ -1,9 +1,6 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import declarative_base
 import uuid
-from pydantic import BaseModel, EmailStr
-from typing import Optional
 from .base import Base
 
 class User(Base):
@@ -29,7 +26,6 @@ class User(Base):
 )
     deleted_at = Column(
     DateTime(timezone=True),
-    server_default=func.now(),
     nullable=True,
     default= None
 )

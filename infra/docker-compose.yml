@@ -195,6 +195,8 @@ services:
       DATABASE_URL: "postgresql+asyncpg://prod:prodpassword@postgres-product:5432/productdb"
       JWT_SECRET: "dev-jwt-secret"
       JWT_ALGORITHM: "HS256"
+    volumes:
+      - ../product-service/uploads:/app/uploads
     depends_on:
       postgres-product:
         condition: service_healthy
@@ -202,6 +204,33 @@ services:
       - backend
     ports:
       - "8002:8080"   # optional direct access
+    restart: on-failure
+
+  # -------------------------
+  # Cart Service
+  # -------------------------
+  cart-service:
+    build:
+      context: ../cart-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://user:userpassword@postgres-user:5432/cartdb"
+      JWT_SECRET: "dev-jwt-secret"
+      JWT_ALGORITHM: "HS256"
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cart.rule=Host(`cart.localhost`)"
+      - "traefik.http.services.cart.loadbalancer.server.port=8080"
+    networks:
+      - backend
+      - traefik
+    ports:
+      - "8003:8080"
     restart: on-failure
 
 volumes:

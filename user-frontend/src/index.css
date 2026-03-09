@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
 @theme {
-  --color-flone-red: #ff2f2f;
-  --color-flone-dark: #212121;
-  --color-flone-gray: #f7f7f7;
-  --color-flone-text: #666666;
-  --color-flone-border: #e5e5e5;
+  --color-shopstack-red: #ff2f2f;
+  --color-shopstack-dark: #212121;
+  --color-shopstack-gray: #f7f7f7;
+  --color-shopstack-text: #666666;
+  --color-shopstack-border: #e5e5e5;
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   
   /* Map theme colors to CSS variables */
@@ -37,7 +37,7 @@
 
 @layer base {
   *, ::before, ::after {
-    @apply border-flone-border transition-colors duration-300;
+    @apply border-shopstack-border transition-colors duration-300;
   }
 
   html, body {
@@ -55,19 +55,19 @@
 }
 
 /* Utilities */
-.flone-container {
+.shopstack-container {
   @apply max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8;
 }
 
-.flone-button {
-  @apply bg-flone-dark text-white px-8 py-3 hover:bg-flone-red transition-all duration-300 inline-block font-medium uppercase tracking-wider text-sm border-none cursor-pointer;
+.shopstack-button {
+  @apply bg-shopstack-dark text-white px-8 py-3 hover:bg-shopstack-red transition-all duration-300 inline-block font-medium uppercase tracking-wider text-sm border-none cursor-pointer;
 }
 
-.dark .flone-button {
-  @apply bg-white text-flone-dark hover:bg-flone-red hover:text-white;
+.dark .shopstack-button {
+  @apply bg-white text-shopstack-dark hover:bg-shopstack-red hover:text-white;
 }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background-color: var(--bg-secondary); }
-::-webkit-scrollbar-thumb { @apply bg-flone-border hover:bg-flone-red rounded-full; }
+::-webkit-scrollbar-thumb { @apply bg-shopstack-border hover:bg-shopstack-red rounded-full; }

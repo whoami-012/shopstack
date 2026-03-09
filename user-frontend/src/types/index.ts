@@ -69,3 +69,29 @@ export interface ProductUpdate {
   description?: string;
   image_url?: string;
 }
+
+// Cart Types
+export interface CartItemRead {
+  id: string;
+  cart_id: string;
+  product_id: string;
+  name?: string;
+  quantity: number;
+}
+
+export interface CartRead {
+  id: string | null;
+  user_id: string;
+  items: CartItemRead[];
+}
+
+export interface CartItemCreate {
+  product_id: string;
+  name?: string;
+  quantity: number;
+}
+
+export interface CartItemQuantityUpdate {
+  product_id: string;
+  quantity: number;
+}

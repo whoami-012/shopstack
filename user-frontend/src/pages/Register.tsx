@@ -32,7 +32,7 @@ const Register: React.FC = () => {
       </div>
 
       <div className="relative w-full max-w-[480px]">
-        <div className="bg-page-bg/70 backdrop-blur-2xl p-8 sm:p-10 rounded-[2.5rem] shadow-2xl border border-flone-border transition-all duration-500">
+        <div className="bg-page-bg/70 backdrop-blur-2xl p-8 sm:p-10 rounded-[2.5rem] shadow-2xl border border-shopstack-border transition-all duration-500">
           <div className="text-center mb-10">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-[2rem] bg-cyan-600 dark:bg-cyan-500 text-white mb-6 shadow-xl shadow-cyan-200 dark:shadow-cyan-900/40 -rotate-3 transform hover:rotate-0 transition-transform duration-300">
               <UserPlus size={36} />

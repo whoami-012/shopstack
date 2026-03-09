@@ -6,6 +6,7 @@ import UserManagement from './pages/Admin/UserManagement';
 import ProductList from './pages/ProductList';
 import AddProduct from './pages/AddProduct';
 import ProductDetail from './pages/ProductDetail';
+import Cart from './pages/Cart';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
@@ -20,8 +21,10 @@ function App() {
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/products" element={<ProductList />} />
-        <Route path="/products/:id" element={<ProductDetail />} />
         <Route path="/products/add" element={<AddProduct />} />
+        <Route path="/products/edit/:id" element={<AddProduct />} />
+        <Route path="/products/:id" element={<ProductDetail />} />
+        <Route path="/cart" element={<Cart />} />
         <Route path="/admin/users" element={<UserManagement />} />
       </Route>
 

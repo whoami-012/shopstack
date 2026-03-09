@@ -36,9 +36,6 @@ async def upload_product_image(file: UploadFile = File(...)):
      file_path = await save_image(file)
      return {"image_url": file_path}
 
-@router.put("/update_details", response_model=list[ProductRead])
-async def update_details(payload: ProductUpdate, )
-
 @router.get("", response_model=list[ProductRead])
 async def list_products(
     db: AsyncSession = Depends(get_db),
@@ -58,4 +55,23 @@ async def get_product(product_id: UUID, db: AsyncSession = Depends(get_db)):
     product = await repo.get_by_product_id(product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    return product
+
+@router.put("/{product_id}", response_model=ProductRead)
+async def update_details(product_id: UUID, payload: ProductUpdate, db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    repo = ProductRepo(db)
+    product = await repo.get_by_product_id(product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    if current_user["role"] != "admin" and product.seller_id != UUID(current_user["id"]):
+        raise HTTPException(status_code=403, detail="You do not have permission to edit this product")
+    
+    update_data = payload.model_dump(exclude_unset=True)
+    
+    await repo.update(product, update_data)
+
+    await db.commit()
+    await db.refresh(product)
+
     return product

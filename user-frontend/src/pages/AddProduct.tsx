@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { productService } from '../api/productService';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { PackagePlus, ArrowLeft, Tag, DollarSign, Layers, AlignLeft, Eye, Box, Info, ImagePlus, Upload, X } from 'lucide-react';
 
 const AddProduct: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const isEditMode = Boolean(id);
+
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -26,6 +29,24 @@ const AddProduct: React.FC = () => {
       navigate('/products');
     }
   }, [user, navigate]);
+
+  useEffect(() => {
+    if (isEditMode && id) {
+      productService.getProduct(id).then(res => {
+        const product = res.data;
+        setFormData({
+          name: product.name || '',
+          category: product.category || '',
+          price: product.price || 0,
+          stock: product.stock || 0,
+          description: product.description || '',
+          image_url: product.image_url || '',
+        });
+      }).catch(() => {
+        setError('Failed to fetch product details.');
+      });
+    }
+  }, [id, isEditMode]);
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -51,10 +72,14 @@ const AddProduct: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await productService.createProduct(formData);
+      if (isEditMode && id) {
+        await productService.updateProduct(id, formData);
+      } else {
+        await productService.createProduct(formData);
+      }
       navigate('/products');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to add product. Please check your inputs.');
+      setError(err.response?.data?.detail || `Failed to ${isEditMode ? 'update' : 'add'} product. Please check your inputs.`);
       setIsSubmitting(false);
     }
   };
@@ -63,7 +88,7 @@ const AddProduct: React.FC = () => {
     <div className="min-h-full w-full bg-page-bg transition-colors duration-500">
       <div className="p-6 lg:p-10 max-w-7xl mx-auto">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10 border-b border-flone-border dark:border-gray-800 pb-10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10 border-b border-shopstack-border dark:border-gray-800 pb-10">
           <div className="flex items-center gap-4">
             <Link 
               to="/products"
@@ -74,9 +99,11 @@ const AddProduct: React.FC = () => {
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-page-heading flex items-center gap-3">
                 <PackagePlus className="text-indigo-600 dark:text-indigo-400" size={32} />
-                Publish Product
+                {isEditMode ? 'Edit Product' : 'Publish Product'}
               </h1>
-              <p className="mt-1 text-sm text-page-text font-medium">Create a new listing for your store catalog.</p>
+              <p className="mt-1 text-sm text-page-text font-medium">
+                {isEditMode ? 'Update the details of your listing.' : 'Create a new listing for your store catalog.'}
+              </p>
             </div>
           </div>
         </div>
@@ -120,7 +147,7 @@ const AddProduct: React.FC = () => {
                       ) : (
                         <div className="relative w-full h-48 rounded-[2rem] overflow-hidden group">
                           <img 
-                            src={`/api-proxy/product${formData.image_url}`} 
+                            src={`/api-proxy/product${formData.image_url.startsWith('/') ? '' : '/'}${formData.image_url}`} 
                             alt="Product preview" 
                             className="w-full h-full object-cover"
                           />
@@ -274,7 +301,7 @@ const AddProduct: React.FC = () => {
                 <div className="h-64 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center relative group">
                   {formData.image_url ? (
                     <img 
-                      src={`/api-proxy/product${formData.image_url}`} 
+                      src={`/api-proxy/product${formData.image_url.startsWith('/') ? '' : '/'}${formData.image_url}`} 
                       alt="Preview" 
                       className="w-full h-full object-cover"
                     />

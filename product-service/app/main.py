@@ -1,16 +1,21 @@
+import os
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from app.api.v1 import products
-import os
+
+# Define base directory (product-service root)
+BASE_DIR = Path(__file__).resolve().parent.parent
+UPLOAD_DIR = BASE_DIR / "uploads"
+
+# Ensure the directory exists
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 app = FastAPI(title="Product Service")
 app.include_router(products.router)
 
-#Ensure the directory exists
-os.makedirs("uploads", exist_ok=True)
-
-# Mount the static directory
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# Mount the static directory with absolute path
+app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 
 @app.get("/")

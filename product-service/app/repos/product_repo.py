@@ -1,7 +1,6 @@
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.product import Product
-from fastapi import Query
 from typing import Optional
 from uuid import UUID
 from collections.abc import Sequence
@@ -15,6 +14,12 @@ class ProductRepo:
         self.session.add(p)
         await self.session.flush()
         return p
+    
+    async def update(self, product: Product, update_data: dict) -> Product:
+        for key, value in update_data.items():
+            setattr(product, key, value)
+        await self.session.flush()
+        return product
     
     async def get_by_product_id(self, id_: UUID) -> Optional[Product]:
         q = await self.session.execute(select(Product).where(Product.id == id_))
@@ -36,12 +41,15 @@ class ProductRepo:
         self,
         *,
         search: str | None = None,
-        category: str | None = Query(default=None),
+        category: str | None = None,
         ids: Sequence[UUID] | None = None,
         limit: int = 20,
         offset: int = 0,
     ) -> list[Product]:
         stmt = select(Product).order_by(Product.created_at.desc()).limit(limit).offset(offset)
+
+        if category:
+            stmt = stmt.where(Product.category == category)
 
         if search:
             stmt = stmt.where(

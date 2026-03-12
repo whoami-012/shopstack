@@ -1,22 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { productService } from '../api/productService';
-import type { ProductRead } from '../types';
-import { Link } from 'react-router-dom';
+import { orderService } from '../api/orderService';
+import { useToast } from '../context/ToastContext';
+import type { ProductRead, CartItemRead } from '../types';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Trash2, 
   Minus, 
   Plus, 
   ShoppingBag, 
+  ChevronLeft,
+  Truck,
   ArrowRight,
-  ChevronLeft
+  ShieldCheck,
+  Zap
 } from 'lucide-react';
 
 const Cart: React.FC = () => {
-  const { cart, updateQuantity, loading: cartLoading, isUpdating, itemCount } = useCart();
+  const { cart, updateQuantity, loading: cartLoading, itemCount, refreshCart } = useCart();
   const [products, setProducts] = useState<Record<string, ProductRead>>({});
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const { showToast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchCartProducts = async () => {
@@ -26,7 +34,7 @@ const Cart: React.FC = () => {
       }
 
       try {
-        const productIds = cart.items.map(item => item.product_id);
+        const productIds = cart.items.map((item: CartItemRead) => item.product_id);
         const { data } = await productService.listProducts({ ids: productIds });
         const productMap = data.reduce((acc, p) => {
           acc[p.id] = p;
@@ -45,7 +53,7 @@ const Cart: React.FC = () => {
 
   const calculateSubtotal = () => {
     if (!cart) return 0;
-    return cart.items.reduce((acc, item) => {
+    return cart.items.reduce((acc: number, item: CartItemRead) => {
       const product = products[item.product_id];
       return acc + (product ? product.price * item.quantity : 0);
     }, 0);
@@ -63,185 +71,241 @@ const Cart: React.FC = () => {
     }
   };
 
+  const handleCheckout = async () => {
+    if (!cart || cart.items.length === 0) return;
+    
+    setIsCheckingOut(true);
+    try {
+      const orderData = {
+        items: cart.items.map(item => ({
+          product_id: item.product_id,
+          quantity: item.quantity
+        }))
+      };
+      
+      const { data: order } = await orderService.createOrder(orderData);
+      showToast("Order sequence initialized!", "success");
+      
+      await refreshCart(true);
+      navigate(`/dashboard/orders/${order.id}`, { state: { order } });
+    } catch (err: any) {
+      console.error("Checkout failed", err);
+      showToast(err.response?.data?.detail || "Authorization failed. Attempt restart.", "error");
+    } finally {
+      setIsCheckingOut(false);
+    }
+  };
+
   if (loading || cartLoading) return (
-    <div className="flex-grow flex items-center justify-center bg-page-bg">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-shopstack-red"></div>
+    <div className="flex-grow flex items-center justify-center bg-white dark:bg-black">
+      <div className="animate-spin rounded-full h-8 w-8 border-2 border-shopstack-red border-t-transparent"></div>
     </div>
   );
 
   const subtotal = calculateSubtotal();
-  const shipping = subtotal > 200 ? 0 : 15;
-  const total = subtotal + shipping;
+  const deliveryFee = subtotal > 50000 ? 0 : 999;
+  const total = subtotal + deliveryFee;
 
   return (
-    <div className="flex-grow bg-page-bg transition-colors duration-500 pb-24">
+    <div className="flex-grow bg-white dark:bg-black transition-colors duration-300 pb-24">
       
       {/* Page Header */}
-      <div className="bg-shopstack-gray dark:bg-[#1a1a1a] py-16 mb-16 text-center transition-colors">
-        <h1 className="text-4xl font-black text-page-heading uppercase tracking-tighter mb-4">Your Shopping Cart</h1>
-        <div className="flex items-center justify-center space-x-2 text-xs font-bold uppercase tracking-widest text-gray-500">
-          <Link to="/products" className="hover:text-shopstack-red transition-colors text-inherit no-underline">Home</Link>
-          <span>/</span>
-          <span className="text-shopstack-red">Cart</span>
+      <div className="shopstack-container py-12">
+        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-4">
+          <Link to="/products" className="hover:text-shopstack-red text-inherit no-underline transition-colors">Catalog</Link>
+          <ChevronLeft size={12} className="rotate-180" />
+          <span>Checkout Queue</span>
+        </div>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-neutral-100 dark:border-neutral-900 pb-8">
+          <h1 className="text-4xl font-black tracking-tighter uppercase">Shopping Bag</h1>
+          <div className="flex items-center gap-3">
+            <span className="text-neutral-500 text-xs font-bold uppercase tracking-widest">{itemCount} Units Indexed</span>
+            {subtotal > 50000 && (
+              <span className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-tighter">Free Express Priority</span>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="shopstack-container">
         {!cart || cart.items.length === 0 ? (
-          <div className="text-center py-20 border-2 border-dashed border-shopstack-border rounded-sm">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-shopstack-gray dark:bg-[#1a1a1a] text-gray-400 rounded-full mb-6">
-              <ShoppingBag size={40} />
+          <div className="bg-neutral-50 dark:bg-neutral-950 rounded-3xl p-16 text-center max-w-2xl mx-auto mt-8 border border-neutral-100 dark:border-neutral-900">
+            <div className="inline-flex items-center justify-center w-24 h-24 bg-white dark:bg-neutral-900 rounded-2xl mb-8 shadow-sm">
+              <ShoppingBag size={48} className="text-neutral-200" />
             </div>
-            <h2 className="text-3xl font-black text-page-heading mb-4">Your cart is empty</h2>
-            <p className="text-gray-500 mb-10 max-w-md mx-auto font-medium">Looks like you haven't added anything to your cart yet. Browse our products and find something you love!</p>
-            <Link to="/products" className="shopstack-button no-underline inline-flex items-center gap-2">
-              <ChevronLeft size={20} /> Back to Shopping
+            <h2 className="text-2xl font-black uppercase tracking-tighter mb-4">Bag is currently empty</h2>
+            <p className="text-neutral-500 text-sm font-medium mb-10 leading-relaxed max-w-xs mx-auto">
+              Access the catalog to add items to your bag and begin the checkout process.
+            </p>
+            <Link to="/products" className="btn-primary !rounded-full !px-10 uppercase tracking-widest text-xs shadow-xl shadow-shopstack-red/20 no-underline">
+              Browse Catalog
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-16 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
             
             {/* Cart Items List */}
-            <div className="xl:col-span-2 space-y-8">
-              <div className="hidden md:grid grid-cols-6 pb-6 border-b border-shopstack-border dark:border-gray-800 text-[10px] font-black uppercase tracking-widest text-gray-400">
-                <div className="col-span-3">Product</div>
-                <div className="text-center">Price</div>
-                <div className="text-center">Quantity</div>
-                <div className="text-right">Total</div>
-              </div>
-
-              <div className="divide-y divide-shopstack-border dark:divide-gray-800">
-                {cart.items.map((item) => {
+            <div className="lg:col-span-8 space-y-8">
+              <div className="divide-y divide-neutral-100 dark:divide-neutral-900">
+                {cart.items.map((item: CartItemRead) => {
                   const product = products[item.product_id];
                   if (!product) return null;
                   
                   return (
-                    <div key={item.id} className="py-6 sm:py-8 flex flex-col md:grid md:grid-cols-6 gap-4 sm:gap-6 items-start md:items-center">
-                      {/* Product Info */}
-                      <div className="md:col-span-3 flex items-start sm:items-center gap-4 sm:gap-6 w-full">
-                        <div className="w-20 h-28 sm:w-24 sm:h-32 bg-shopstack-gray dark:bg-[#1a1a1a] rounded-sm overflow-hidden flex-shrink-0">
-                          {product.image_url ? (
-                            <img src={`/api-proxy/product${product.image_url.startsWith('/') ? '' : '/'}${product.image_url}`} alt={product.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-400 uppercase">{product.name.substring(0, 2)}</div>
-                          )}
-                        </div>
-                        <div className="space-y-1 flex-grow">
-                          <p className="text-[10px] font-black uppercase text-shopstack-red tracking-widest">{product.category}</p>
-                          <h3 className="text-base sm:text-lg font-black text-page-heading line-clamp-2 sm:line-clamp-none">
-                            <Link to={`/products/${product.id}`} className="hover:text-shopstack-red transition-colors no-underline text-inherit">
-                              {item.name || product.name}
-                            </Link>
-                          </h3>
-                          <button 
-                            onClick={() => handleUpdateQuantity(item.product_id, 0)}
-                            className="text-xs font-bold text-gray-400 hover:text-shopstack-red flex items-center gap-1 mt-2 sm:mt-3 bg-transparent border-none cursor-pointer p-0"
-                          >
-                            <Trash2 size={14} /> Remove
-                          </button>
-                        </div>
+                    <div key={item.id} className="py-10 flex gap-8 md:gap-12 first:pt-0 group">
+                      {/* Product Image */}
+                      <div className="w-28 h-28 md:w-40 md:h-40 bg-neutral-50 dark:bg-neutral-950 rounded-2xl overflow-hidden flex-shrink-0 p-6 transition-all group-hover:shadow-lg group-hover:shadow-black/5">
+                        {product.image_url ? (
+                          <img 
+                            src={`/api-proxy/product${product.image_url}`} 
+                            alt={product.name} 
+                            className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal" 
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Zap size={40} className="text-neutral-200 dark:text-neutral-800" />
+                          </div>
+                        )}
                       </div>
 
-                      {/* Mobile controls container */}
-                      <div className="flex flex-wrap items-center justify-between w-full md:contents pt-4 border-t border-shopstack-border dark:border-gray-800 md:pt-0 md:border-none">
-                        {/* Price */}
-                        <div className="text-left md:text-center w-1/2 md:w-auto mb-4 md:mb-0">
-                          <span className="block md:hidden text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Price</span>
-                          <span className="text-base sm:text-lg font-black text-page-heading">${product.price.toFixed(2)}</span>
-                        </div>
-
-                        {/* Quantity */}
-                        <div className="flex justify-end md:justify-center w-1/2 md:w-auto mb-4 md:mb-0">
-                          <div className="flex flex-col items-end md:items-center">
-                            <span className="block md:hidden text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Quantity</span>
-                            <div className={`inline-flex items-center border border-shopstack-border dark:border-gray-700 rounded-sm transition-all duration-200 h-9 sm:h-auto ${updatingId === item.product_id ? 'opacity-40 scale-95' : 'opacity-100 scale-100'}`}>
+                      {/* Product Details */}
+                      <div className="flex-grow flex flex-col md:flex-row md:justify-between gap-6">
+                        <div className="space-y-2 max-w-md">
+                          <div className="flex items-center gap-3">
+                            <p className="text-[10px] font-black uppercase text-shopstack-red tracking-widest">
+                              {product.category}
+                            </p>
+                            <div className="h-1 w-1 bg-neutral-300 rounded-full" />
+                            <p className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">
+                              ID: {product.id.substring(0,8)}
+                            </p>
+                          </div>
+                          <h3 className="text-lg font-black uppercase tracking-tight group-hover:text-shopstack-red transition-colors">
+                            <Link to={`/products/${product.id}`} className="no-underline text-inherit">
+                              {product.name}
+                            </Link>
+                          </h3>
+                          <p className="text-xs text-neutral-500 font-medium leading-relaxed line-clamp-2">
+                            {product.description || "Premium ShopStack certified product. Engineered for quality and performance."}
+                          </p>
+                          
+                          <div className="flex items-center gap-8 mt-8">
+                            {/* Quantity Controls */}
+                            <div className="flex items-center bg-neutral-50 dark:bg-neutral-950 rounded-lg p-1 border border-neutral-100 dark:border-neutral-900">
                               <button 
                                 onClick={() => handleUpdateQuantity(item.product_id, item.quantity - 1)}
-                                disabled={updatingId !== null}
-                                className="p-2 sm:p-2 hover:bg-shopstack-gray dark:hover:bg-[#222] transition-colors border-none bg-transparent text-page-text disabled:cursor-not-allowed"
+                                disabled={updatingId !== null || item.quantity <= 1}
+                                className="w-8 h-8 rounded-md hover:bg-white dark:hover:bg-neutral-900 hover:shadow-sm flex items-center justify-center transition-all disabled:opacity-30 border-none bg-transparent cursor-pointer text-shopstack-black dark:text-white"
                               >
                                 <Minus size={14} />
                               </button>
-                              <div className="px-3 sm:px-4 py-1 sm:py-2 min-w-[32px] sm:min-w-[40px] flex items-center justify-center">
-                                {updatingId === item.product_id ? (
-                                  <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-shopstack-red border-t-transparent rounded-full animate-spin"></div>
-                                ) : (
-                                  <span className="font-black text-sm sm:text-base text-page-heading">{item.quantity}</span>
-                                )}
-                              </div>
+                              <span className="w-10 text-center text-xs font-black text-shopstack-black dark:text-white">
+                                {updatingId === item.product_id ? '...' : item.quantity}
+                              </span>
                               <button 
                                 onClick={() => handleUpdateQuantity(item.product_id, item.quantity + 1)}
                                 disabled={updatingId !== null}
-                                className="p-2 sm:p-2 hover:bg-shopstack-gray dark:hover:bg-[#222] transition-colors border-none bg-transparent text-page-text disabled:cursor-not-allowed"
+                                className="w-8 h-8 rounded-md hover:bg-white dark:hover:bg-neutral-900 hover:shadow-sm flex items-center justify-center transition-all disabled:opacity-30 border-none bg-transparent cursor-pointer text-shopstack-black dark:text-white"
                               >
                                 <Plus size={14} />
                               </button>
                             </div>
+                            
+                            <button 
+                              onClick={() => handleUpdateQuantity(item.product_id, 0)}
+                              className="text-[10px] font-black uppercase tracking-widest text-neutral-400 hover:text-red-500 transition-colors flex items-center gap-2 bg-transparent border-none cursor-pointer"
+                            >
+                              <Trash2 size={14} />
+                              <span>Delete</span>
+                            </button>
                           </div>
                         </div>
 
-                        {/* Line Total */}
-                        <div className="text-right w-full md:w-auto pt-4 md:pt-0 border-t border-shopstack-border dark:border-gray-800 md:border-none flex justify-between items-center md:block">
-                          <span className="text-page-text font-bold md:hidden text-sm uppercase tracking-widest">Total:</span>
-                          <span className="text-lg sm:text-xl font-black text-shopstack-red">${(product.price * item.quantity).toFixed(2)}</span>
+                        {/* Price Column */}
+                        <div className="text-right flex md:flex-col justify-between items-center md:items-end min-w-[120px]">
+                           <div className="md:hidden text-[10px] font-black uppercase text-neutral-400 tracking-widest">Subtotal</div>
+                           <div className="price-tag !text-2xl !mt-0 text-shopstack-black dark:text-white">
+                             <span className="price-currency">Rs.</span>
+                             <span>{(product.price * item.quantity).toLocaleString()}</span>
+                           </div>
+                           <div className="hidden md:block text-[10px] font-black text-neutral-400 uppercase tracking-widest mt-2">
+                             {product.price.toLocaleString()} / Unit
+                           </div>
                         </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
-
-              <div className="pt-8 flex flex-wrap justify-between gap-6">
-                <Link to="/products" className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-widest text-page-heading hover:text-shopstack-red transition-colors no-underline">
-                  <ChevronLeft size={18} /> Continue Shopping
-                </Link>
-                <button 
-                  onClick={() => {/* Clear cart if needed */}}
-                  className="text-sm font-black uppercase tracking-widest text-gray-400 hover:text-shopstack-red transition-colors bg-transparent border-none cursor-pointer"
-                >
-                  Clear Shopping Cart
-                </button>
-              </div>
             </div>
 
             {/* Cart Summary */}
-            <div className="bg-shopstack-gray dark:bg-[#1a1a1a] p-8 lg:p-10 rounded-sm sticky top-32 transition-colors">
-              <h3 className="text-xl font-black text-page-heading uppercase tracking-tighter mb-8 pb-4 border-b border-shopstack-border dark:border-gray-800">Order Summary</h3>
+            <div className="lg:col-span-4 bg-neutral-50 dark:bg-neutral-950 p-10 rounded-3xl sticky top-32 space-y-10 border border-neutral-100 dark:border-neutral-900 shadow-sm">
+              <h2 className="text-2xl font-black uppercase tracking-tighter">Order Intelligence</h2>
               
-              <div className="space-y-4 mb-8">
-                <div className="flex justify-between text-sm font-bold">
-                  <span className="text-gray-500 uppercase tracking-widest">Subtotal ({itemCount} items)</span>
-                  <span className="text-page-heading">${subtotal.toFixed(2)}</span>
+              <div className="space-y-5">
+                <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
+                  <span className="text-neutral-500">Gross Total</span>
+                  <span className="text-shopstack-black dark:text-white font-black">Rs. {subtotal.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-sm font-bold">
-                  <span className="text-gray-500 uppercase tracking-widest">Shipping</span>
-                  <span className="text-page-heading">{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</span>
+                <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
+                  <span className="text-neutral-500">Logistics Fee</span>
+                  <span className={`font-black ${deliveryFee === 0 ? 'text-emerald-500' : 'text-shopstack-black dark:text-white'}`}>
+                    {deliveryFee === 0 ? 'SUBSIDIZED' : `Rs. ${deliveryFee.toLocaleString()}`}
+                  </span>
                 </div>
-                {shipping > 0 && (
-                  <p className="text-[10px] text-shopstack-red font-black uppercase tracking-widest">
-                    Add ${(200 - subtotal).toFixed(2)} more for FREE shipping!
-                  </p>
+                
+                {deliveryFee > 0 && (
+                  <div className="bg-white dark:bg-neutral-900 p-5 rounded-2xl flex gap-4 border border-neutral-100 dark:border-neutral-800 shadow-sm">
+                    <Truck size={20} className="text-shopstack-red flex-shrink-0" />
+                    <p className="text-[11px] font-bold leading-relaxed uppercase tracking-tight">
+                      Increase order value by Rs. {(50000 - subtotal).toLocaleString()} to unlock <span className="text-shopstack-red">priority free logistics</span>.
+                    </p>
+                  </div>
                 )}
               </div>
 
-              <div className="pt-6 border-t border-shopstack-border dark:border-gray-800 mb-10">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-black text-page-heading uppercase tracking-tighter">Total</span>
-                  <span className="text-3xl font-black text-shopstack-red">${total.toFixed(2)}</span>
+              <div className="pt-8 border-t border-neutral-200 dark:border-neutral-800">
+                <div className="flex justify-between items-center mb-10">
+                  <span className="text-sm font-black uppercase tracking-widest">Final Amount</span>
+                  <div className="price-tag !text-3xl !mt-0 text-shopstack-black dark:text-white">
+                    <span className="price-currency">Rs.</span>
+                    <span>{total.toLocaleString()}</span>
+                  </div>
                 </div>
+
+                <button 
+                  onClick={handleCheckout}
+                  disabled={isCheckingOut}
+                  className="btn-primary !w-full !py-5 !rounded-xl flex justify-between items-center px-10 shadow-2xl shadow-shopstack-red/30 group uppercase tracking-[0.2em] text-xs disabled:opacity-50"
+                >
+                  {isCheckingOut ? (
+                    <span className="flex items-center gap-2">
+                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                      Authorizing...
+                    </span>
+                  ) : (
+                    <>
+                      <span>Authorize Checkout</span>
+                      <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </button>
               </div>
 
-              <button className="w-full shopstack-button !py-5 flex justify-center items-center gap-3 shadow-2xl shadow-shopstack-red/20 group">
-                Proceed To Checkout <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-              </button>
-
-              <div className="mt-8 space-y-4">
-                <p className="text-[10px] font-bold text-gray-500 text-center uppercase tracking-widest">Accepted Payments</p>
-                <div className="flex justify-center gap-4 grayscale opacity-50">
-                  <div className="w-10 h-6 bg-gray-300 rounded-sm"></div>
-                  <div className="w-10 h-6 bg-gray-300 rounded-sm"></div>
-                  <div className="w-10 h-6 bg-gray-300 rounded-sm"></div>
-                  <div className="w-10 h-6 bg-gray-300 rounded-sm"></div>
+              <div className="space-y-6">
+                <div className="flex gap-4 p-5 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl border border-emerald-100 dark:border-emerald-900/20">
+                  <ShieldCheck size={20} className="text-emerald-600 flex-shrink-0" />
+                  <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-black uppercase tracking-tight leading-relaxed">
+                    Secure Transaction Protocol Active. 365-day satisfaction guarantee included.
+                  </p>
+                </div>
+                
+                <div className="flex justify-center items-center gap-6 opacity-30 grayscale dark:invert brightness-0 dark:brightness-200">
+                  <div className="w-10 h-6 bg-neutral-400 rounded-sm"></div>
+                  <div className="w-10 h-6 bg-neutral-400 rounded-sm"></div>
+                  <div className="w-10 h-6 bg-neutral-400 rounded-sm"></div>
+                  <div className="w-10 h-6 bg-neutral-400 rounded-sm"></div>
                 </div>
               </div>
             </div>

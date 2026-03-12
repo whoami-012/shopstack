@@ -35,3 +35,6 @@ class ProductUpdate(BaseModel):
 
 class DeleteProductRequest(BaseModel):
     name: str
+
+class StockReserveRequest(BaseModel):
+    quantity: int = Field(..., gt=0)

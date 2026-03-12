@@ -2,7 +2,7 @@ import os
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "postgresql+asyncpg://prod:prodpassword@localhost:5432/productdb"
+    DATABASE_URL: str = "postgresql+asyncpg://user:userpassword@localhost:5434/productdb"
     JWT_SECRET: str
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60

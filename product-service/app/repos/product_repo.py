@@ -1,4 +1,4 @@
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_ , update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.product import Product
 from typing import Optional
@@ -64,3 +64,22 @@ class ProductRepo:
 
         q = await self.session.execute(stmt)
         return list(q.scalars().all())
+    
+    async def reserve_stock(self, product_id, quantity: int):
+        stmt = (
+            update(Product)
+            .where(Product.id == product_id)
+            .where(Product.stock >= quantity)
+            .values(stock=Product.stock - quantity)
+            .returning(Product.id, Product.stock, Product.name, Product.price)
+
+        )
+
+        result = await self.session.execute(stmt)
+        row = result.first()
+
+        if row is None:
+            return None
+        
+        await self.session.flush()
+        return row

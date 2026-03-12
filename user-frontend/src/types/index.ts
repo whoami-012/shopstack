@@ -95,3 +95,34 @@ export interface CartItemQuantityUpdate {
   product_id: string;
   quantity: number;
 }
+
+// Order Types
+export type OrderStatus = 'PENDING_PAYMENT' | 'PAID' | 'FAILED' | 'CANCELLED';
+
+export interface OrderItemCreate {
+  product_id: string;
+  quantity: number;
+}
+
+export interface OrderCreate {
+  items: OrderItemCreate[];
+}
+
+export interface OrderItemRead {
+  id: string;
+  product_id: string;
+  product_name: string;
+  price: number;
+  quantity: number;
+  subtotal: number;
+}
+
+export interface OrderRead {
+  id: string;
+  user_id: string;
+  status: OrderStatus;
+  total_amount: number;
+  created_at: string;
+  updated_at: string;
+  items: OrderItemRead[];
+}

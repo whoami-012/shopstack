@@ -1,7 +1,7 @@
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "postgresql+asyncpg://user:userpassword@localhost:5432/usersdb"
+    DATABASE_URL: str = "postgresql+asyncpg://user:userpassword@localhost:5433/usersdb"
     REDIS_URL: str = "redis://redis:6379/0"
     RABBITMQ_URL: str = "amqp://guest:guest@rabbitmq:5672/"
     JWT_SECRET: str

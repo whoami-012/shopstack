@@ -29,6 +29,9 @@ env/
 dist/
 build/
 *.egg-info/
+tools/
+ikea_clone/
+website-cloner/
 
 # OS
 .DS_Store

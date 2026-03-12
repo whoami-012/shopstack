@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.schemas.product import ProductCreate, ProductRead, ProductUpdate
+from app.schemas.product import ProductCreate, StockReserveRequest, ProductRead, ProductUpdate
 from app.repos.product_repo import ProductRepo
-from app.api.dependencies import get_current_user, get_db
+from app.api.dependencies import get_current_user
+from app.db.database import get_db
 from app.utils.file_upload import save_image
 from uuid import UUID
 
@@ -75,3 +76,27 @@ async def update_details(product_id: UUID, payload: ProductUpdate, db: AsyncSess
     await db.refresh(product)
 
     return product
+
+@router.post("/{product_id}/reserve")
+async def reserve_product_stock(
+    product_id: UUID,
+    payload: StockReserveRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    repo = ProductRepo(db)
+    reserved = await repo.reserve_stock(product_id, payload.quantity)
+
+    if reserved is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Insufficient stock"
+        )
+    await db.commit()
+
+    return {
+        "product_id": str(reserved.id),
+        "product_name": reserved.name,
+        "price": float(reserved.price),
+        "remaining_stock": reserved.stock,
+        "reserved_quantity": payload.quantity,
+    }

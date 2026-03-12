@@ -1,39 +1,37 @@
-import { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { productService } from '../api/productService';
 import type { ProductRead } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
-import { Link } from 'react-router-dom';
-import winterHero from '../assets/winter-offer.jpg';
+import { Link, useSearchParams } from 'react-router-dom';
 import { 
   Plus, 
-  Search, 
   ShoppingCart,
-  Eye,
   Heart,
-  Repeat
+  ChevronRight,
+  Filter,
+  TrendingUp,
+  Award,
+  Layers
 } from 'lucide-react';
 
 const ProductList: React.FC = () => {
   const [products, setProducts] = useState<ProductRead[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [activeTab, setActiveTab] = useState('New Arrivals');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get('category') || 'All');
   const [addingToCartId, setAddingToCartId] = useState<string | null>(null);
   const { user } = useAuth();
   const { addToCart } = useCart();
   const { showToast } = useToast();
 
+  const searchQuery = searchParams.get('search') || '';
+
   const CATEGORIES = ["All", "General", "Electronics", "Clothing", "Home & Kitchen", "Beauty", "Sports", "Books", "Other"];
 
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      fetchProducts();
-    }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
+    fetchProducts();
   }, [selectedCategory, searchQuery]);
 
   const fetchProducts = async () => {
@@ -55,7 +53,9 @@ const ProductList: React.FC = () => {
     }
   };
 
-  const handleAddToCart = async (product: ProductRead) => {
+  const handleAddToCart = async (e: React.MouseEvent, product: ProductRead) => {
+    e.preventDefault();
+    e.stopPropagation();
     setAddingToCartId(product.id);
     try {
       await addToCart({
@@ -63,200 +63,200 @@ const ProductList: React.FC = () => {
         name: product.name,
         quantity: 1
       });
-      showToast(`Added ${product.name} to cart!`, 'success');
+      showToast(`${product.name} added to your bag.`, 'success');
     } catch (err) {
       console.error("Failed to add to cart", err);
-      showToast("Failed to add to cart. Please try again.", "error");
+      showToast("Could not add to bag.", "error");
     } finally {
       setAddingToCartId(null);
     }
   };
 
-  const filteredProducts = useMemo(() => {
-    // Keep client-side filter as an extra layer of responsiveness, but make it null-safe
-    return products.filter(p => 
-      (p.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-      (p.description?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-      (p.category?.toLowerCase() || '').includes(searchQuery.toLowerCase())
-    );
-  }, [products, searchQuery]);
+  const updateCategory = (cat: string) => {
+    setSelectedCategory(cat);
+    const newParams = new URLSearchParams(searchParams);
+    if (cat === 'All') {
+      newParams.delete('category');
+    } else {
+      newParams.set('category', cat);
+    }
+    setSearchParams(newParams);
+  };
 
-  if (loading) return (
-    <div className="h-screen w-full flex items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-shopstack-red"></div>
+  if (loading && products.length === 0) return (
+    <div className="h-screen w-full flex items-center justify-center bg-white dark:bg-black">
+      <div className="animate-spin rounded-full h-8 w-8 border-2 border-shopstack-red border-t-transparent"></div>
     </div>
   );
 
   return (
-    <div className="w-full flex-grow bg-page-bg">
+    <div className="w-full flex-grow bg-white dark:bg-black transition-colors duration-300">
       
-      <div className="relative mb-20 overflow-hidden min-h-[500px] lg:min-h-[600px] flex items-center transition-colors duration-500">
-        {/* Background Image Fill */}
-        <div className="absolute inset-0 z-0">
+      {/* ShopStack Hero Banner */}
+      <div className="shopstack-container py-8">
+        <div className="relative rounded-3xl overflow-hidden bg-neutral-900 aspect-[21/9] flex items-center group">
           <img 
-            src={winterHero} 
-            alt="Winter Background" 
-            className="w-full h-full object-cover object-center"
+            src="https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?auto=format&fit=crop&q=80&w=2000" 
+            alt="New Arrivals" 
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000 opacity-60"
           />
-          {/* Subtle gradient overlay to help text stand out */}
-          <div className="absolute inset-0 bg-gradient-to-r from-white/80 via-white/40 to-transparent dark:from-black/80 dark:via-black/40 dark:to-transparent"></div>
-        </div>
-
-        <div className="shopstack-container relative z-10 w-full">
-          <div className="max-w-2xl">
-            <h3 className="text-shopstack-red font-bold text-lg sm:text-xl uppercase tracking-[0.3em] mb-4">New Arrivals</h3>
-            <h1 className="text-5xl sm:text-6xl lg:text-8xl font-black text-page-heading leading-[1.1] mb-8 tracking-tighter">
-              Winter Offer <br/> 2026 Collection
+          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent" />
+          <div className="relative z-10 p-8 md:p-20 text-white max-w-2xl">
+            <div className="flex items-center gap-2 mb-6">
+              <span className="bg-shopstack-red text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Limited Drops</span>
+              <span className="text-white/60 text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
+                <TrendingUp size={12} /> Trending Now
+              </span>
+            </div>
+            <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-6 leading-[0.9] !text-white uppercase">
+              The Next <br />Generation <br /><span className="text-shopstack-red">Essentials.</span>
             </h1>
-            <p className="text-page-text text-xl mb-10 opacity-90 font-bold max-w-md">
-              Discover the latest trends in winter fashion with our exclusive collection.
+            <p className="text-lg font-medium mb-10 opacity-80 !text-white max-w-md">
+              Engineered for performance. Styled for the modern era. Shop the latest collection today.
             </p>
             <div className="flex flex-wrap gap-4">
-              <button className="bg-shopstack-dark text-white dark:bg-white dark:text-shopstack-dark hover:bg-shopstack-red dark:hover:bg-shopstack-red dark:hover:text-white transition-all duration-300 px-12 py-4 uppercase text-sm tracking-widest font-black shadow-2xl shadow-black/20">
-                Explore Now
-              </button>
-              <button className="bg-white/20 backdrop-blur-md border-2 border-page-heading text-page-heading hover:bg-page-heading hover:text-white dark:hover:text-black transition-all duration-300 px-12 py-4 uppercase text-sm tracking-widest font-black">
-                View Gallery
-              </button>
+              <button className="btn-primary !rounded-full !px-10 !py-4 shadow-2xl shadow-shopstack-red/40 uppercase tracking-widest text-xs">Shop Collection</button>
+              <button className="bg-white/10 backdrop-blur-md text-white border border-white/20 px-10 py-4 rounded-full font-black text-xs uppercase tracking-widest hover:bg-white hover:text-black transition-all">View Lookbook</button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="shopstack-container pb-24">
+      <div className="shopstack-container py-12">
         
-        {/* Section Title & Tabs */}
-        <div className="text-center mb-10">
-          <h2 className="text-3xl sm:text-4xl font-bold text-page-heading mb-6 uppercase tracking-wider">Daily Deals!</h2>
+        {/* Navigation & Header */}
+        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-10">
+          <Link to="/products" className="hover:text-shopstack-red text-inherit no-underline transition-colors">Home</Link>
+          <ChevronRight size={12} />
+          <span>Catalog</span>
+          {selectedCategory !== 'All' && (
+            <>
+              <ChevronRight size={12} />
+              <span className="text-shopstack-red">{selectedCategory}</span>
+            </>
+          )}
+        </div>
+
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-16">
+          <div className="space-y-2">
+            <h2 className="text-4xl md:text-5xl font-black tracking-tighter uppercase">
+              {selectedCategory === 'All' ? 'Latest Drops' : selectedCategory}
+            </h2>
+            <div className="flex items-center gap-4">
+              <span className="text-neutral-500 text-xs font-black uppercase tracking-widest">{products.length} Items Indexed</span>
+              <div className="h-1 w-1 bg-neutral-300 rounded-full" />
+              <span className="text-shopstack-red text-xs font-black uppercase tracking-widest flex items-center gap-1">
+                <Award size={14} /> Verified Quality
+              </span>
+            </div>
+          </div>
           
-          {/* Category Filter Buttons */}
-          <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mb-12">
+          {/* Category Filter Pills */}
+          <div className="flex flex-wrap gap-2">
             {CATEGORIES.map(cat => (
               <button 
                 key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`text-xs font-bold uppercase tracking-widest transition-all duration-300 px-6 py-2.5 rounded-full border ${selectedCategory === cat ? 'bg-shopstack-red border-shopstack-red text-white shadow-lg shadow-shopstack-red/20' : 'bg-transparent border-shopstack-border text-gray-400 hover:text-shopstack-red hover:border-shopstack-red'}`}
+                onClick={() => updateCategory(cat)}
+                className={`text-[10px] font-black uppercase tracking-widest px-6 py-2.5 rounded-full border-2 transition-all cursor-pointer ${selectedCategory === cat ? 'bg-shopstack-red border-shopstack-red text-white shadow-lg shadow-shopstack-red/20' : 'bg-transparent border-neutral-100 dark:border-neutral-800 text-neutral-500 hover:border-shopstack-red hover:text-shopstack-red'}`}
               >
                 {cat}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-4 sm:gap-8">
-            {['New Arrivals', 'Best Sellers', 'Sale Items'].map(tab => (
-              <button 
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`text-lg font-medium transition-colors border-none bg-transparent cursor-pointer ${activeTab === tab ? 'text-page-heading border-b-2 border-shopstack-red pb-1' : 'text-gray-400 hover:text-page-heading'}`}
-              >
-                {tab}
               </button>
             ))}
           </div>
         </div>
 
         {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-10 gap-4">
-          <div className="relative w-full sm:w-80">
-            <input 
-              type="text" 
-              placeholder="Search products..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-transparent border-b border-shopstack-border dark:border-gray-700 py-2 pl-2 pr-10 focus:outline-none focus:border-shopstack-red transition-colors text-page-text placeholder-gray-400"
-            />
-            <Search size={18} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400" />
+        <div className="flex items-center justify-between mb-12 border-b border-neutral-100 dark:border-neutral-900 pb-8">
+          <div className="flex items-center gap-6">
+             {user && (user.role === 'admin' || user.role === 'seller') && (
+              <Link 
+                to="/products/add" 
+                className="btn-primary !py-2.5 !px-6 !text-[10px] !rounded-full uppercase tracking-widest no-underline flex items-center gap-2 shadow-lg shadow-shopstack-red/20"
+              >
+                <Plus size={14} /> List Item
+              </Link>
+            )}
+            <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-neutral-500 hover:text-shopstack-red transition-colors cursor-pointer bg-transparent border-none">
+              <Filter size={14} /> Filters
+            </button>
           </div>
           
-          {(user?.role === 'admin' || user?.role === 'seller') && (
-            <Link 
-              to="/products/add" 
-              className="bg-shopstack-dark dark:bg-white text-white dark:text-shopstack-dark px-6 py-2.5 hover:bg-shopstack-red dark:hover:bg-shopstack-red dark:hover:text-white transition-colors flex items-center text-sm font-bold uppercase tracking-wider"
-            >
-              <Plus size={18} className="mr-2" /> Add Product
-            </Link>
-          )}
+          <div className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
+            Sorted by: <span className="text-shopstack-black dark:text-white cursor-pointer hover:text-shopstack-red transition-colors ml-1">Algorithm</span>
+          </div>
         </div>
 
         {/* Product Grid */}
-        {filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-8">
-            {filteredProducts.map((p) => (
-              <div key={p.id} className="group cursor-pointer">
-                {/* Image Area wrapped in Link */}
-                <Link to={`/products/${p.id}`} className="no-underline block">
-                  <div className="relative overflow-hidden bg-shopstack-gray dark:bg-[#1a1a1a] aspect-[3/4] mb-3 sm:mb-4 transition-colors duration-500 rounded-sm">
-                    <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 flex flex-col gap-1 sm:gap-2">
-                      {p.stock <= 5 && p.stock > 0 && <span className="bg-shopstack-red text-white text-[9px] sm:text-[11px] font-bold uppercase px-2 py-1 sm:px-3 sm:py-1">-10%</span>}
-                      {p.stock === 0 && <span className="bg-black text-white text-[9px] sm:text-[11px] font-bold uppercase px-2 py-1 sm:px-3 sm:py-1">Out of Stock</span>}
-                    </div>
-                    
+        {products.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-16">
+            {products.map((p) => (
+              <div key={p.id} className="product-card-base group relative">
+                <Link to={`/products/${p.id}`} className="no-underline text-inherit block">
+                  <div className="product-image-wrapper bg-neutral-50 dark:bg-neutral-950 p-6">
                     {p.image_url ? (
                       <img 
                         src={`/api-proxy/product${p.image_url.startsWith('/') ? '' : '/'}${p.image_url}`} 
                         alt={p.name} 
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                        className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal group-hover:scale-110 transition-transform duration-700" 
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-300 dark:text-gray-700">
-                        <span className="font-bold text-4xl opacity-20 uppercase">{p.name.substring(0, 2)}</span>
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Layers size={40} className="text-neutral-200 dark:text-neutral-800" />
                       </div>
                     )}
+                    
+                    {/* Hover Actions */}
+                    <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    
+                    <button 
+                      onClick={(e) => handleAddToCart(e, p)}
+                      disabled={addingToCartId === p.id || p.stock === 0}
+                      className="absolute bottom-4 left-4 right-4 bg-shopstack-black text-white py-3 rounded-lg flex items-center justify-center gap-2 transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 font-black text-[10px] uppercase tracking-widest hover:bg-shopstack-red cursor-pointer disabled:opacity-50"
+                    >
+                      {addingToCartId === p.id ? (
+                        <div className="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full" />
+                      ) : (
+                        <><ShoppingCart size={14} /> Add to Bag</>
+                      )}
+                    </button>
 
-                    <div className="absolute right-4 top-4 flex flex-col gap-2 translate-x-12 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300 z-20">
-                      <button 
-                        onClick={(e) => { e.preventDefault(); /* handle wishlist */ }}
-                        className="w-10 h-10 bg-white dark:bg-[#222] text-page-heading flex items-center justify-center hover:bg-shopstack-red hover:text-white dark:hover:bg-shopstack-red shadow-sm transition-colors rounded-sm border-none cursor-pointer"
-                      >
-                        <Heart size={18} />
-                      </button>
-                      <button className="w-10 h-10 bg-white dark:bg-[#222] text-page-heading flex items-center justify-center hover:bg-shopstack-red hover:text-white dark:hover:bg-shopstack-red shadow-sm transition-colors rounded-sm border-none cursor-pointer">
-                        <Eye size={18} />
-                      </button>
-                      <button 
-                        onClick={(e) => { e.preventDefault(); /* handle compare */ }}
-                        className="w-10 h-10 bg-white dark:bg-[#222] text-page-heading flex items-center justify-center hover:bg-shopstack-red hover:text-white dark:hover:bg-shopstack-red shadow-sm transition-colors rounded-sm border-none cursor-pointer"
-                      >
-                        <Repeat size={18} />
-                      </button>
-                    </div>
+                    <button className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/80 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center text-neutral-400 hover:text-shopstack-red transition-all scale-90 opacity-0 group-hover:scale-100 group-hover:opacity-100 border-none cursor-pointer">
+                      <Heart size={18} />
+                    </button>
+                  </div>
 
-                    <div className="absolute bottom-0 left-0 w-full translate-y-full opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 z-20">
-                      <button 
-                        onClick={(e) => { e.preventDefault(); handleAddToCart(p); }}
-                        disabled={addingToCartId === p.id || p.stock === 0}
-                        className="w-full bg-shopstack-red text-white py-3 font-medium uppercase text-sm tracking-wider hover:bg-black transition-colors flex justify-center items-center gap-2 border-none cursor-pointer disabled:opacity-50"
-                      >
-                        <ShoppingCart size={18} /> {addingToCartId === p.id ? 'Adding...' : 'Add To Cart'}
-                      </button>
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-start">
+                      <p className="text-[10px] font-black uppercase text-neutral-400 tracking-widest leading-none">{p.category}</p>
+                      <span className={`text-[9px] font-black uppercase tracking-tighter ${p.stock <= 5 && p.stock > 0 ? 'text-amber-500' : 'text-neutral-400'}`}>
+                        {p.stock > 0 ? `${p.stock} In Stock` : 'Sold Out'}
+                      </span>
                     </div>
+                    <h3 className="text-[13px] font-bold text-shopstack-black dark:text-white leading-tight group-hover:text-shopstack-red transition-colors truncate uppercase">{p.name}</h3>
+                    
+                    <div className="price-tag text-shopstack-black dark:text-white pt-1">
+                      <span className="price-currency">Rs.</span>
+                      <span>{(p.price || 0).toLocaleString()}</span>
+                    </div>
+                    
+                    {p.stock === 0 && (
+                      <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest pt-2">Sold Out</p>
+                    )}
                   </div>
                 </Link>
-
-                <div className="text-center">
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">
-                    {p.category}
-                  </div>
-                  <h3 className="text-page-heading text-base hover:text-shopstack-red transition-colors mb-1">
-                    <Link to={`/products/${p.id}`} className="no-underline text-inherit">{p.name}</Link>
-                  </h3>
-                  <div className="flex items-center justify-center gap-2 text-sm">
-                    <span className="text-shopstack-red font-bold">${p.price.toFixed(2)}</span>
-                    <span className="text-gray-400 line-through">${(p.price * 1.2).toFixed(2)}</span>
-                  </div>
-                </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="py-32 text-center border border-shopstack-border dark:border-gray-800 border-dashed">
-            <h3 className="text-2xl font-bold text-shopstack-dark dark:text-white mb-2">No Products Found</h3>
-            <p className="text-gray-500 mb-8">We couldn't find anything matching your search.</p>
+          <div className="py-40 text-center bg-neutral-50 dark:bg-neutral-950 rounded-3xl border border-neutral-100 dark:border-neutral-900">
+            <Layers size={48} className="mx-auto text-neutral-200 mb-6" />
+            <h3 className="text-2xl font-black uppercase tracking-tighter mb-2">No items matching your query</h3>
+            <p className="text-neutral-500 text-sm font-medium mb-10 max-w-xs mx-auto">Our systems couldn't find any products matching those parameters. Try resetting your filters.</p>
             <button 
-              onClick={() => setSearchQuery('')}
-              className="bg-shopstack-red text-white px-8 py-3 uppercase text-sm font-bold tracking-wider hover:bg-shopstack-dark transition-colors"
+              onClick={() => updateCategory('All')}
+              className="btn-secondary !rounded-full !px-8 uppercase tracking-widest text-[10px]"
             >
-              Clear Search
+              Clear Workspace
             </button>
           </div>
         )}

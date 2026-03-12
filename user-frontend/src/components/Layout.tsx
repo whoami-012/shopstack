@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
+import { useTheme } from '../context/ThemeContext';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { productService } from '../api/productService';
 import { 
@@ -11,32 +11,26 @@ import {
   ShoppingCart,
   Menu,
   X,
+  MapPin,
+  Globe,
   Sun,
   Moon,
-  ChevronDown
+  Layers,
+  HelpCircle
 } from 'lucide-react';
 
 const Layout: React.FC = () => {
   const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const { itemCount } = useCart();
+  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [headerSearch, setHeaderSearch] = useState('');
   const [liveResults, setLiveResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  const [showLiveResults, setShowLiveResults] = useState(false);
 
   useEffect(() => {
     if (headerSearch.trim().length >= 2) {
@@ -45,6 +39,7 @@ const Layout: React.FC = () => {
         try {
           const { data } = await productService.listProducts({ search: headerSearch });
           setLiveResults(data.slice(0, 5));
+          setShowLiveResults(true);
         } catch (err) {
           console.error("Live search failed", err);
         } finally {
@@ -54,8 +49,17 @@ const Layout: React.FC = () => {
       return () => clearTimeout(delayDebounceFn);
     } else {
       setLiveResults([]);
+      setShowLiveResults(false);
     }
   }, [headerSearch]);
+
+  const handleHeaderSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (headerSearch.trim()) {
+      navigate(`/products?search=${encodeURIComponent(headerSearch.trim())}`);
+      setShowLiveResults(false);
+    }
+  };
 
   const isActive = (path: string) => {
     if (path === '/products' && location.pathname === '/products') return true;
@@ -63,270 +67,284 @@ const Layout: React.FC = () => {
     return false;
   };
 
-  const handleHeaderSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (headerSearch.trim()) {
-      navigate(`/products?search=${encodeURIComponent(headerSearch.trim())}`);
-      setSearchOpen(false);
-      setHeaderSearch('');
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-page-bg flex flex-col transition-colors duration-500 font-sans text-page-text">
+    <div className="min-h-screen bg-white dark:bg-black flex flex-col font-sans text-shopstack-black dark:text-white transition-colors duration-300">
       
-      {/* Top Header Bar */}
-      <div className="bg-shopstack-gray dark:bg-[#1a1a1a] py-2 hidden md:block">
-        <div className="shopstack-container flex justify-between items-center text-xs">
+      {/* ShopStack Utility Bar */}
+      <div className="bg-shopstack-black text-white py-2 hidden md:block">
+        <div className="shopstack-container flex justify-between items-center text-[11px] font-bold tracking-tight">
           <div className="flex items-center space-x-6">
-            <div className="group relative cursor-pointer flex items-center">
-              <span>English</span>
-              <ChevronDown size={12} className="ml-1" />
-            </div>
-            <div className="group relative cursor-pointer flex items-center">
-              <span>USD</span>
-              <ChevronDown size={12} className="ml-1" />
-            </div>
-            <div className="flex items-center">
-              Call Us <span className="font-bold ml-1">3965410</span>
-            </div>
+            <button className="flex items-center gap-1.5 hover:text-shopstack-red bg-transparent border-none text-white cursor-pointer transition-colors">
+              <Globe size={14} />
+              EN
+            </button>
+            <button 
+              onClick={toggleTheme}
+              className="flex items-center gap-1.5 hover:text-shopstack-red bg-transparent border-none text-white cursor-pointer transition-colors"
+            >
+              {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
+              {theme === 'light' ? 'DARK MODE' : 'LIGHT MODE'}
+            </button>
+            <span className="text-neutral-500 font-medium">Free express delivery on orders over Rs. 50,000</span>
           </div>
-          <div>
-            <p>Free delivery on order over <span className="text-shopstack-red font-bold">$200</span></p>
+          <div className="flex items-center space-x-6">
+            <button className="flex items-center gap-1.5 hover:text-shopstack-red bg-transparent border-none text-white cursor-pointer transition-colors">
+              <HelpCircle size={14} />
+              SUPPORT
+            </button>
+            <button className="flex items-center gap-1.5 hover:text-shopstack-red bg-transparent border-none text-white cursor-pointer transition-colors">
+              <MapPin size={14} />
+              TRACK ORDER
+            </button>
           </div>
         </div>
       </div>
 
-      <header className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-page-bg shadow-md py-4' : 'bg-transparent py-6'}`}>
-        <div className="shopstack-container flex justify-between items-center text-page-text">
+      {/* Main Header */}
+      <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-neutral-100 dark:border-neutral-900 transition-colors duration-300">
+        <div className="shopstack-container py-4 flex items-center gap-8">
           
-          {/* Logo */}
-          <Link to="/products" className="text-2xl sm:text-3xl font-black tracking-tighter text-page-heading no-underline truncate pr-2">
-            shopstack.
+          {/* ShopStack Logo */}
+          <Link to="/products" className="flex items-center gap-2 no-underline group flex-shrink-0">
+            <div className="w-9 h-9 bg-shopstack-red rounded-lg flex items-center justify-center text-white transform group-hover:rotate-12 transition-transform shadow-lg shadow-shopstack-red/20">
+              <Layers size={22} fill="currentColor" />
+            </div>
+            <span className="text-xl font-black tracking-tighter text-shopstack-black dark:text-white">
+              SHOP<span className="text-shopstack-red">STACK</span>
+            </span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center space-x-10">
-            <Link to="/products" className={`text-sm font-medium uppercase tracking-wide hover:text-shopstack-red transition-colors no-underline ${isActive('/products') ? 'text-shopstack-red' : 'text-page-heading'}`}>
-              Home
+          {/* Navigation */}
+          <nav className="hidden xl:flex items-center space-x-8">
+            <Link to="/products" className={`text-[13px] font-bold uppercase tracking-wider hover:text-shopstack-red no-underline transition-colors ${isActive('/products') ? 'text-shopstack-red' : 'text-shopstack-black dark:text-white'}`}>
+              Browse
             </Link>
-            <Link to="/products" className={`text-sm font-medium uppercase tracking-wide hover:text-shopstack-red transition-colors no-underline text-page-heading`}>
-              Shop
+            <Link to="/dashboard" className={`text-[13px] font-bold uppercase tracking-wider hover:text-shopstack-red no-underline transition-colors ${isActive('/dashboard') ? 'text-shopstack-red' : 'text-shopstack-black dark:text-white'}`}>
+              Profile
             </Link>
-            <Link to="/dashboard" className={`text-sm font-medium uppercase tracking-wide hover:text-shopstack-red transition-colors no-underline ${isActive('/dashboard') ? 'text-shopstack-red' : 'text-page-heading'}`}>
-              Dashboard
+            {(user?.role === 'admin' || user?.role === 'seller') && (
+              <Link to="/products/add" className={`text-[13px] font-bold uppercase tracking-wider hover:text-shopstack-red no-underline transition-colors ${isActive('/products/add') ? 'text-shopstack-red' : 'text-shopstack-black dark:text-white'}`}>
+                List Item
+              </Link>
+            )}
+            <Link to="/products" className="text-[13px] font-bold uppercase tracking-wider hover:text-shopstack-red no-underline text-shopstack-black dark:text-white transition-colors">
+              Exclusive
             </Link>
             {user?.role === 'admin' && (
-              <Link to="/admin/users" className={`text-sm font-medium uppercase tracking-wide hover:text-shopstack-red transition-colors no-underline ${isActive('/admin/users') ? 'text-shopstack-red' : 'text-page-heading'}`}>
-                Users
+              <Link to="/admin/users" className={`text-[13px] font-bold uppercase tracking-wider hover:text-shopstack-red no-underline transition-colors ${isActive('/admin/users') ? 'text-shopstack-red' : 'text-shopstack-black dark:text-white'}`}>
+                Admin
               </Link>
             )}
           </nav>
 
-          {/* Right Icons */}
-          <div className="flex items-center space-x-3 sm:space-x-6">
-            <button onClick={toggleTheme} className="text-page-heading hover:text-shopstack-red transition-colors bg-transparent border-none cursor-pointer">
-              {theme === 'light' ? <Moon size={22} strokeWidth={1.5} /> : <Sun size={22} strokeWidth={1.5} />}
-            </button>
-            <button 
-              onClick={() => setSearchOpen(true)}
-              className="text-page-heading hover:text-shopstack-red transition-colors bg-transparent border-none cursor-pointer"
-            >
-              <Search size={22} strokeWidth={1.5} />
-            </button>
-            
-            <div className="relative hidden sm:block">
+          {/* Search */}
+          <div className="flex-grow relative max-w-xl hidden md:block">
+            <form onSubmit={handleHeaderSearch} className="relative group">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-shopstack-red transition-colors">
+                <Search size={18} />
+              </div>
+              <input 
+                type="text" 
+                placeholder="Search products, brands and more..."
+                value={headerSearch}
+                onChange={(e) => setHeaderSearch(e.target.value)}
+                className="shopstack-input !pl-12 !py-2.5 text-sm"
+                onFocus={() => headerSearch.length >= 2 && setShowLiveResults(true)}
+              />
+            </form>
+
+            {/* Live Search Results */}
+            {showLiveResults && (
+              <div className="absolute top-full left-0 w-full mt-2 bg-white dark:bg-neutral-900 shadow-2xl rounded-xl border border-neutral-100 dark:border-neutral-800 overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
+                {isSearching ? (
+                  <div className="p-6 text-center">
+                    <div className="animate-spin h-5 w-5 border-2 border-shopstack-red border-t-transparent rounded-full mx-auto"></div>
+                  </div>
+                ) : liveResults.length > 0 ? (
+                  <div className="p-2">
+                    {liveResults.map(p => (
+                      <Link 
+                        key={p.id} 
+                        to={`/products/${p.id}`} 
+                        onClick={() => setShowLiveResults(false)}
+                        className="flex items-center gap-4 p-3 hover:bg-neutral-50 dark:hover:bg-neutral-800 rounded-lg no-underline group transition-colors"
+                      >
+                        <div className="w-12 h-12 bg-neutral-100 dark:bg-neutral-800 rounded-md overflow-hidden flex-shrink-0">
+                          {p.image_url && (
+                            <img src={`/api-proxy/product${p.image_url}`} alt={p.name} className="w-full h-full object-cover" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-shopstack-black dark:text-white group-hover:text-shopstack-red">{p.name}</p>
+                          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{p.category}</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-6 text-center text-sm text-neutral-500 font-medium font-bold">No items found</div>
+                )}
+                <div className="bg-neutral-50 dark:bg-neutral-800/50 p-3 text-center border-t border-neutral-100 dark:border-neutral-800">
+                  <button onClick={handleHeaderSearch} className="text-xs font-black text-shopstack-red hover:underline bg-transparent border-none cursor-pointer uppercase tracking-widest">
+                    View all results
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center space-x-1 md:space-x-3 ml-auto">
+            <div className="relative">
               <button 
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="text-page-heading hover:text-shopstack-red transition-colors bg-transparent border-none cursor-pointer"
+                className="p-2.5 hover:bg-neutral-100 dark:hover:bg-neutral-900 rounded-full transition-all bg-transparent border-none cursor-pointer group"
               >
-                <User size={22} strokeWidth={1.5} />
+                <User size={22} className="text-shopstack-black dark:text-white group-hover:text-shopstack-red" />
               </button>
+              
               {userMenuOpen && (
-                <div className="absolute right-0 mt-3 w-48 bg-page-bg shadow-xl border border-shopstack-border rounded-sm py-2 z-50">
-                  <div className="px-4 py-2 border-b border-shopstack-border mb-2 text-page-text">
-                    <p className="text-xs font-bold text-page-heading truncate">{user?.username}</p>
-                    <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
-                  </div>
-                  <Link to="/dashboard" onClick={() => setUserMenuOpen(false)} className="block px-4 py-2 text-sm text-page-text hover:bg-shopstack-gray hover:text-shopstack-red no-underline">My Account</Link>
-                  <button onClick={() => { logout(); setUserMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-page-text hover:bg-shopstack-gray hover:text-shopstack-red border-none bg-transparent cursor-pointer">Logout</button>
+                <div className="absolute right-0 mt-3 w-64 bg-white dark:bg-neutral-900 shadow-2xl rounded-xl border border-neutral-100 dark:border-neutral-800 py-4 z-[100] animate-in fade-in zoom-in-95 duration-200">
+                  {user ? (
+                    <>
+                      <div className="px-6 py-3 border-b border-neutral-100 dark:border-neutral-800 mb-2">
+                        <p className="text-sm font-black truncate uppercase tracking-tight">Hej {user.username}!</p>
+                        <p className="text-[10px] text-shopstack-red font-bold uppercase tracking-widest">{user.role}</p>
+                      </div>
+                      <Link to="/dashboard" onClick={() => setUserMenuOpen(false)} className="block px-6 py-3 text-[13px] font-bold text-shopstack-black dark:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800 no-underline transition-colors">Account Dashboard</Link>
+                      <button onClick={() => { logout(); setUserMenuOpen(false); }} className="w-full text-left px-6 py-3 text-[13px] font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 border-none bg-transparent cursor-pointer transition-colors">Sign out</button>
+                    </>
+                  ) : (
+                    <div className="px-6 py-2">
+                      <p className="text-sm font-black mb-4 uppercase tracking-tight">Account</p>
+                      <Link to="/login" onClick={() => setUserMenuOpen(false)} className="btn-primary !w-full !py-2.5 !text-[12px] mb-2 no-underline shadow-lg shadow-shopstack-red/20">Login</Link>
+                      <Link to="/register" onClick={() => setUserMenuOpen(false)} className="block text-center text-[11px] font-bold text-neutral-500 hover:text-shopstack-black dark:hover:text-white no-underline mt-4 uppercase tracking-widest transition-colors">Create account</Link>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-            
-            <button className="text-page-heading hover:text-shopstack-red transition-colors hidden sm:block bg-transparent border-none cursor-pointer">
-              <Heart size={22} strokeWidth={1.5} />
+
+            <button className="p-2.5 hover:bg-neutral-100 dark:hover:bg-neutral-900 rounded-full transition-all bg-transparent border-none cursor-pointer group">
+              <Heart size={22} className="text-shopstack-black dark:text-white group-hover:text-shopstack-red" />
             </button>
-            <Link to="/cart" className="text-page-heading hover:text-shopstack-red transition-colors relative bg-transparent border-none cursor-pointer">
-              <ShoppingCart size={22} strokeWidth={1.5} />
+
+            <Link to="/cart" className="p-2.5 hover:bg-neutral-100 dark:hover:bg-neutral-900 rounded-full transition-all no-underline group relative">
+              <ShoppingCart size={22} className="text-shopstack-black dark:text-white group-hover:text-shopstack-red" />
               {itemCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-shopstack-dark dark:bg-white text-white dark:text-shopstack-dark w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold">
+                <span className="absolute top-1 right-1 bg-shopstack-red text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black animate-in zoom-in duration-300">
                   {itemCount}
                 </span>
               )}
             </Link>
-            
-            {/* Mobile Menu Toggle */}
+
             <button 
-              className="lg:hidden text-page-heading ml-2 bg-transparent border-none cursor-pointer"
+              className="xl:hidden p-2.5 hover:bg-neutral-100 dark:hover:bg-neutral-900 rounded-full bg-transparent border-none cursor-pointer text-shopstack-black dark:text-white"
               onClick={() => setMobileMenuOpen(true)}
             >
-              <Menu size={24} strokeWidth={1.5} />
+              <Menu size={22} />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Search Overlay */}
-      <div className={`fixed inset-0 z-[100] bg-white dark:bg-[#111] transition-all duration-500 flex flex-col ${searchOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
-        <div className="p-6 flex justify-end">
-          <button 
-            onClick={() => setSearchOpen(false)}
-            className="p-4 text-page-heading hover:text-shopstack-red transition-colors bg-transparent border-none cursor-pointer"
-          >
-            <X size={40} strokeWidth={1} />
-          </button>
-        </div>
-        <div className="flex-grow flex flex-col items-center justify-center px-6 overflow-y-auto">
-          <form onSubmit={handleHeaderSearch} className="w-full max-w-4xl relative mb-12">
-            <input 
-              autoFocus={searchOpen}
-              type="text" 
-              placeholder="Search for products..."
-              value={headerSearch}
-              onChange={(e) => setHeaderSearch(e.target.value)}
-              className="w-full bg-transparent border-b-2 border-shopstack-border dark:border-gray-800 py-6 text-4xl sm:text-6xl font-black text-page-heading focus:outline-none focus:border-shopstack-red transition-colors placeholder-gray-200 dark:placeholder-gray-800"
-            />
-            <button type="submit" className="absolute right-0 bottom-6 text-page-heading hover:text-shopstack-red transition-colors bg-transparent border-none cursor-pointer">
-              {isSearching ? <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-shopstack-red"></div> : <Search size={40} strokeWidth={1.5} />}
-            </button>
-          </form>
-
-          {/* Live Results List */}
-          {liveResults.length > 0 && (
-            <div className="w-full max-w-4xl grid grid-cols-1 sm:grid-cols-2 gap-6 pb-20">
-              {liveResults.map(p => (
-                <Link 
-                  key={p.id} 
-                  to={`/products/${p.id}`} 
-                  onClick={() => setSearchOpen(false)}
-                  className="flex items-center gap-6 p-4 rounded-3xl hover:bg-shopstack-gray dark:hover:bg-[#222] transition-all no-underline group"
-                >
-                  <div className="w-20 h-20 bg-white dark:bg-black rounded-2xl overflow-hidden flex-shrink-0 border border-shopstack-border dark:border-gray-800">
-                    {p.image_url ? (
-                      <img src={`/api-proxy/product${p.image_url}`} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-400 uppercase">{p.name.substring(0,2)}</div>
-                    )}
-                  </div>
-                  <div className="flex-grow">
-                    <p className="text-[10px] font-black uppercase text-shopstack-red tracking-widest mb-1">{p.category}</p>
-                    <h4 className="text-xl font-bold text-page-heading group-hover:text-shopstack-red transition-colors">{p.name}</h4>
-                    <p className="text-lg font-black text-page-heading mt-1">${p.price.toFixed(2)}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-          
-          {headerSearch.trim().length >= 2 && liveResults.length === 0 && !isSearching && (
-            <p className="text-xl font-bold text-gray-400">No products found for "{headerSearch}"</p>
-          )}
-        </div>
-      </div>
-
-      {/* Mobile Menu Sidebar */}
-      <div className={`fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${mobileMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setMobileMenuOpen(false)}>
+      {/* Mobile Nav */}
+      <div className={`fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm transition-opacity duration-300 xl:hidden ${mobileMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setMobileMenuOpen(false)}>
         <div 
-          className={`fixed inset-y-0 right-0 w-[85vw] max-w-[320px] bg-page-bg shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          className={`fixed inset-y-0 left-0 w-[85vw] max-w-[320px] bg-white dark:bg-black shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
           onClick={e => e.stopPropagation()}
         >
-          <div className="flex justify-between items-center p-6 border-b border-shopstack-border dark:border-gray-800">
-            <span className="font-black text-xl text-page-heading tracking-tighter">shopstack.</span>
-            <button onClick={() => setMobileMenuOpen(false)} className="text-gray-500 hover:text-shopstack-red bg-transparent border-none cursor-pointer p-2 -mr-2"><X size={24} /></button>
+          <div className="flex justify-between items-center p-6 border-b border-neutral-100 dark:border-neutral-800">
+            <div className="flex items-center gap-2">
+              <Layers size={20} className="text-shopstack-red" fill="currentColor" />
+              <span className="font-black tracking-tighter">SHOPSTACK</span>
+            </div>
+            <button onClick={() => setMobileMenuOpen(false)} className="text-neutral-400 hover:text-shopstack-black dark:hover:text-white rounded-full p-2 bg-transparent border-none cursor-pointer transition-colors"><X size={24} /></button>
           </div>
           
-          {user && (
-            <div className="p-6 border-b border-shopstack-border dark:border-gray-800 bg-shopstack-gray/50 dark:bg-white/5">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-shopstack-dark dark:bg-white text-white dark:text-black flex items-center justify-center font-bold text-xl uppercase">
-                  {user.username.charAt(0)}
-                </div>
-                <div className="overflow-hidden">
-                  <p className="font-bold text-page-heading truncate">{user.username}</p>
-                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <nav className="p-6 flex flex-col space-y-4 flex-grow overflow-y-auto">
-            <Link to="/products" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold text-page-heading hover:text-shopstack-red no-underline py-2 border-b border-transparent hover:border-shopstack-red/20 transition-all">Home</Link>
-            <Link to="/products" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold text-page-heading hover:text-shopstack-red no-underline py-2 border-b border-transparent hover:border-shopstack-red/20 transition-all">Shop</Link>
-            <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold text-page-heading hover:text-shopstack-red no-underline py-2 border-b border-transparent hover:border-shopstack-red/20 transition-all">Dashboard</Link>
+          <nav className="p-6 flex flex-col space-y-6 flex-grow overflow-y-auto uppercase tracking-widest font-black text-xs">
+            <Link to="/products" onClick={() => setMobileMenuOpen(false)} className="text-shopstack-black dark:text-white no-underline hover:text-shopstack-red transition-colors">Browse Products</Link>
+            <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className="text-shopstack-black dark:text-white no-underline hover:text-shopstack-red transition-colors">My Profile</Link>
+            <Link to="/products" onClick={() => setMobileMenuOpen(false)} className="text-shopstack-black dark:text-white no-underline hover:text-shopstack-red transition-colors">Special Offers</Link>
             {user?.role === 'admin' && (
-              <Link to="/admin/users" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold text-page-heading hover:text-shopstack-red no-underline py-2 border-b border-transparent hover:border-shopstack-red/20 transition-all">Users</Link>
+              <Link to="/admin/users" onClick={() => setMobileMenuOpen(false)} className="text-shopstack-black dark:text-white no-underline hover:text-shopstack-red transition-colors">Admin Panel</Link>
             )}
           </nav>
           
-          <div className="p-6 border-t border-shopstack-border dark:border-gray-800">
+          <div className="p-6 border-t border-neutral-100 dark:border-neutral-800">
             {user ? (
               <button 
                 onClick={() => { logout(); setMobileMenuOpen(false); }} 
-                className="w-full py-4 bg-shopstack-gray dark:bg-[#222] text-page-heading font-bold uppercase tracking-wider text-sm hover:bg-shopstack-red hover:text-white transition-colors border-none rounded-sm"
+                className="btn-secondary !w-full !rounded-md uppercase tracking-widest text-[10px]"
               >
-                Logout
+                Sign Out
               </button>
             ) : (
-              <div className="flex gap-4">
-                <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="flex-1 py-4 text-center border border-shopstack-border dark:border-gray-700 text-page-heading font-bold uppercase tracking-wider text-sm hover:border-shopstack-red hover:text-shopstack-red transition-colors no-underline rounded-sm">Login</Link>
-                <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="flex-1 py-4 text-center bg-shopstack-red text-white font-bold uppercase tracking-wider text-sm hover:bg-black transition-colors no-underline rounded-sm">Sign Up</Link>
+              <div className="flex flex-col gap-3">
+                <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="btn-primary !w-full no-underline uppercase tracking-widest text-[10px]">Log In</Link>
+                <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="btn-secondary !w-full no-underline uppercase tracking-widest text-[10px]">Create Account</Link>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Page Content */}
-      <main className="flex-grow flex flex-col">
+      <main className="flex-grow">
         <Outlet />
       </main>
 
-      {/* Footer */}
-      <footer className="bg-shopstack-gray dark:bg-[#1a1a1a] pt-20 pb-10 mt-auto">
-        <div className="shopstack-container grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 border-b border-shopstack-border dark:border-gray-800 pb-16">
-          <div>
-            <Link to="/products" className="text-3xl font-black tracking-tighter text-shopstack-dark dark:text-white inline-block mb-6 no-underline">
-              shopstack.
-            </Link>
-            <p className="mb-4 text-sm leading-relaxed">© 2026 shopstack.<br/>All Rights Reserved</p>
+      {/* ShopStack Footer */}
+      <footer className="bg-shopstack-bg-gray dark:bg-neutral-950 pt-24 pb-12 mt-20 border-t border-neutral-100 dark:border-neutral-900 transition-colors duration-300">
+        <div className="shopstack-container">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 pb-20 border-b border-neutral-200 dark:border-neutral-800">
+            <div className="space-y-8">
+              <div className="flex items-center gap-2">
+                <Layers size={24} className="text-shopstack-red" fill="currentColor" />
+                <span className="text-xl font-black tracking-tighter">SHOPSTACK</span>
+              </div>
+              <p className="text-sm text-neutral-500 font-medium leading-relaxed max-w-xs">
+                Premium retail experience powered by modern technology. Elevating your everyday lifestyle with curated collections.
+              </p>
+              <div className="flex gap-4">
+                <button className="btn-primary !bg-shopstack-black !px-6 !py-2.5 !text-xs !rounded-md uppercase tracking-widest">Join Now</button>
+              </div>
+            </div>
+            <div>
+              <h4 className="text-[13px] font-black uppercase tracking-[0.2em] mb-8 dark:text-white">Quick Links</h4>
+              <ul className="space-y-4 text-[13px] list-none p-0 font-medium">
+                <li><Link to="/products" className="hover:text-shopstack-red no-underline text-neutral-500 transition-colors">Catalog</Link></li>
+                <li><Link to="#" className="hover:text-shopstack-red no-underline text-neutral-500 transition-colors">Track Order</Link></li>
+                <li><Link to="#" className="hover:text-shopstack-red no-underline text-neutral-500 transition-colors">Size Guide</Link></li>
+                <li><Link to="#" className="hover:text-shopstack-red no-underline text-neutral-500 transition-colors">Returns</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-[13px] font-black uppercase tracking-[0.2em] mb-8 dark:text-white">Support</h4>
+              <ul className="space-y-4 text-[13px] list-none p-0 font-medium">
+                <li><Link to="#" className="hover:text-shopstack-red no-underline text-neutral-500 transition-colors">Contact Us</Link></li>
+                <li><Link to="#" className="hover:text-shopstack-red no-underline text-neutral-500 transition-colors">Shipping Info</Link></li>
+                <li><Link to="#" className="hover:text-shopstack-red no-underline text-neutral-500 transition-colors">Help Center</Link></li>
+                <li><Link to="#" className="hover:text-shopstack-red no-underline text-neutral-500 transition-colors">Privacy</Link></li>
+              </ul>
+            </div>
+            <div className="space-y-8">
+              <h4 className="text-[13px] font-black uppercase tracking-[0.2em] mb-8 dark:text-white">Newsletter</h4>
+              <p className="text-sm text-neutral-500 font-medium">Get the latest updates on new arrivals and sales.</p>
+              <div className="flex gap-2">
+                <input type="text" placeholder="Email" className="bg-white dark:bg-neutral-900 border-none px-4 py-2 rounded-md text-xs w-full focus:ring-2 focus:ring-shopstack-red/20 outline-none" />
+                <button className="bg-shopstack-red text-white px-4 py-2 rounded-md font-bold text-xs uppercase transition-all active:scale-95">Go</button>
+              </div>
+            </div>
           </div>
-          <div>
-            <h4 className="text-base font-bold text-shopstack-dark dark:text-white uppercase mb-6">About Us</h4>
-            <ul className="space-y-3 text-sm list-none p-0">
-              <li><Link to="#" className="hover:text-shopstack-red transition-colors no-underline text-inherit">About us</Link></li>
-              <li><Link to="#" className="hover:text-shopstack-red transition-colors no-underline text-inherit">Store location</Link></li>
-              <li><Link to="#" className="hover:text-shopstack-red transition-colors no-underline text-inherit">Contact</Link></li>
-              <li><Link to="#" className="hover:text-shopstack-red transition-colors no-underline text-inherit">Orders tracking</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-base font-bold text-shopstack-dark dark:text-white uppercase mb-6">Useful Links</h4>
-            <ul className="space-y-3 text-sm list-none p-0">
-              <li><Link to="#" className="hover:text-shopstack-red transition-colors no-underline text-inherit">Returns</Link></li>
-              <li><Link to="#" className="hover:text-shopstack-red transition-colors no-underline text-inherit">Support Policy</Link></li>
-              <li><Link to="#" className="hover:text-shopstack-red transition-colors no-underline text-inherit">Size guide</Link></li>
-              <li><Link to="#" className="hover:text-shopstack-red transition-colors no-underline text-inherit">FAQs</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-base font-bold text-shopstack-dark dark:text-white uppercase mb-6">Follow Us</h4>
-            <ul className="space-y-3 text-sm list-none p-0">
-              <li><Link to="#" className="hover:text-shopstack-red transition-colors no-underline text-inherit">Facebook</Link></li>
-              <li><Link to="#" className="hover:text-shopstack-red transition-colors no-underline text-inherit">Twitter</Link></li>
-              <li><Link to="#" className="hover:text-shopstack-red transition-colors no-underline text-inherit">Instagram</Link></li>
-              <li><Link to="#" className="hover:text-shopstack-red transition-colors no-underline text-inherit">Youtube</Link></li>
-            </ul>
+          
+          <div className="pt-12 flex flex-col md:flex-row justify-between items-center gap-8">
+            <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">© 2026 SHOPSTACK INTERACTIVE. ALL RIGHTS RESERVED.</p>
+            <div className="flex flex-wrap justify-center gap-8 text-[11px] font-black text-neutral-400 uppercase tracking-widest">
+              <span className="hover:text-shopstack-red cursor-pointer transition-colors">Privacy</span>
+              <span className="hover:text-shopstack-red cursor-pointer transition-colors">Cookies</span>
+              <span className="hover:text-shopstack-red cursor-pointer transition-colors">Terms</span>
+              <span className="hover:text-shopstack-red cursor-pointer transition-colors">Status</span>
+            </div>
           </div>
         </div>
       </footer>

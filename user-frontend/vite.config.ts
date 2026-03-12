@@ -29,6 +29,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api-proxy\/cart/, ''),
       },
+      '/api-proxy/order': {
+        target: 'http://127.0.0.1:8004',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api-proxy\/order/, ''),
+      },
     },
   },
 })

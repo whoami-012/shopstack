@@ -197,4 +197,4 @@ Fork the repository, make improvements, and submit a pull request.
 
 ## 📌 Notes
 
-This project is built for learning real-world backend architecture and showcasing produc
+This project is built for learning real-world backend architecture.
